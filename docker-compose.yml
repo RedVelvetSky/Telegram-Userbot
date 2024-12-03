@@ -4,7 +4,7 @@ services:
   instance1:
     build: .
     env_file:
-      - tg_userbot_envs/instance1.env
+      - ../tg_userbot_envs/instance1.env
     stdin_open: true
     tty: true
     container_name: telegram_userbot_instance1
@@ -12,7 +12,7 @@ services:
 #  instance2:
 #    build: .
 #    env_file:
-#      - tg_userbot_envs/instance2.env
+#      - ../tg_userbot_envs/instance2.env
 #    stdin_open: true
 #    tty: true
 #    container_name: telegram_userbot_instance2
@@ -20,7 +20,7 @@ services:
 #  instance3:
 #    build: .
 #    env_file:
-#      - tg_userbot_envs/instance3.env
+#      - ../tg_userbot_envs/instance3.env
 #    stdin_open: true
 #    tty: true
 #    container_name: telegram_userbot_instance3
