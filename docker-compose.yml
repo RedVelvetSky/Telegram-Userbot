@@ -8,16 +8,16 @@ services:
     stdin_open: true
     tty: true
 
-  instance2:
-    build: .
-    env_file:
-      - tg_userbot_envs/instance2.env
-    stdin_open: true
-    tty: true
-
-  instance3:
-    build: .
-    env_file:
-      - tg_userbot_envs/instance3.env
-    stdin_open: true
-    tty: true
+#  instance2:
+#    build: .
+#    env_file:
+#      - tg_userbot_envs/instance2.env
+#    stdin_open: true
+#    tty: true
+#
+#  instance3:
+#    build: .
+#    env_file:
+#      - tg_userbot_envs/instance3.env
+#    stdin_open: true
+#    tty: true
