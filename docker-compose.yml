@@ -7,23 +7,17 @@ services:
       - tg_userbot_envs/instance1.env
     stdin_open: true
     tty: true
-    volumes:
-      - ./generated/instance1:/app/generated
 
-#  instance2:
-#    build: .
-#    env_file:
-#      - tg_userbot_envs/instance2.env
-#    stdin_open: true
-#    tty: true
-#    volumes:
-#      - ./generated/instance2:/app/generated
-#
-#  instance3:
-#    build: .
-#    env_file:
-#      - tg_userbot_envs/instance3.env
-#    stdin_open: true
-#    tty: true
-#    volumes:
-#      - ./generated/instance3:/app/generated
+  instance2:
+    build: .
+    env_file:
+      - tg_userbot_envs/instance2.env
+    stdin_open: true
+    tty: true
+
+  instance3:
+    build: .
+    env_file:
+      - tg_userbot_envs/instance3.env
+    stdin_open: true
+    tty: true
