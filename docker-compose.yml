@@ -9,18 +9,18 @@ services:
     tty: true
     container_name: telegram_userbot_instance1
 
-  instance2:
-    build: .
-    env_file:
-      - tg_userbot_envs/instance2.env
-    stdin_open: true
-    tty: true
-    container_name: telegram_userbot_instance2
-
-  instance3:
-    build: .
-    env_file:
-      - tg_userbot_envs/instance3.env
-    stdin_open: true
-    tty: true
-    container_name: telegram_userbot_instance3
+#  instance2:
+#    build: .
+#    env_file:
+#      - tg_userbot_envs/instance2.env
+#    stdin_open: true
+#    tty: true
+#    container_name: telegram_userbot_instance2
+#
+#  instance3:
+#    build: .
+#    env_file:
+#      - tg_userbot_envs/instance3.env
+#    stdin_open: true
+#    tty: true
+#    container_name: telegram_userbot_instance3
