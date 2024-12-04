@@ -388,7 +388,7 @@ async def process_user_message(user_id: int, user_message: str, message: Message
     # Generate a response using the updated history
     responses = await generate_response(user_id, user_message)
 
-    if random.random() >= 0.10:  # 90% chance to send responses
+    if random.random() >= 0.15:  # 90% chance to send responses
         for i, response in enumerate(responses):
             # Typing delay
             typing_speed = random.uniform(1.2, 2.5)
