@@ -12,4 +12,4 @@ COPY app/ ./
 
 RUN mkdir -p /app/generated
 
-ENTRYPOINT ["python", "app/main.py"]
+ENTRYPOINT ["python", "./main.py"]
