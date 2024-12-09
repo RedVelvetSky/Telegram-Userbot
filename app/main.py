@@ -696,7 +696,8 @@ async def background_activity_monitor():
         time_range = INACTIVITY_TIME_RANGE
         if time_since_last_active > datetime.timedelta(minutes=time_range):
             print(f"No active conversations in the last {time_range} minutes. Generating contextual message.")
-            contextual_message = await generate_contextual_message()
+            # contextual_message = await generate_contextual_message()
+            contextual_message = None
             if contextual_message:
                 # Simulate typing delay
                 typing_speed = random.uniform(4, 6)
