@@ -508,7 +508,7 @@ def get_embedding(text, model="text-embedding-3-small"):
    text = text.replace("\n", " ")
    return clientai.embeddings.create(input = [text], model=model).data[0].embedding
 
-def retrieve_answer(query, top_k=1, HDF5_PATH="./knowledge_base.h5"):
+def retrieve_answer(query, top_k=1, HDF5_PATH=os.getenv("HDF5_PATH")):
     # Load data
     with h5py.File(HDF5_PATH, "r") as f:
         questions = [q.decode("utf-8") for q in f["questions"][:]]
