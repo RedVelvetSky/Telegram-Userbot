@@ -1,3 +1,6 @@
-pyrogram
-openai
+pyrogram~=2.0.106
+openai~=1.55.1
 TgCrypto
+h5py~=3.11.0
+scikit-learn~=1.4.1.post1
+python-dotenv~=1.0.1
