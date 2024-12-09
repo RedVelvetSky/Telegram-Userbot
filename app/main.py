@@ -377,7 +377,7 @@ def sanitize_user_input(user_message: str) -> str:
 
     for phrase in restricted_phrases:
         if phrase in user_message.lower():
-            return "Sorry, I can't process this request. Let's chat naturally instead! 😊"
+            return "wdym,  bro? chill"
 
     return user_message
 
@@ -508,7 +508,7 @@ def get_embedding(text, model="text-embedding-3-small"):
    text = text.replace("\n", " ")
    return clientai.embeddings.create(input = [text], model=model).data[0].embedding
 
-def retrieve_answer(query, top_k=1, HDF5_PATH="./data/knowledge_base.h5"):
+def retrieve_answer(query, top_k=1, HDF5_PATH="./knowledge_base.h5"):
     # Load data
     with h5py.File(HDF5_PATH, "r") as f:
         questions = [q.decode("utf-8") for q in f["questions"][:]]
