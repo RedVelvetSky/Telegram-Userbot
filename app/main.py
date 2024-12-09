@@ -559,6 +559,7 @@ async def process_user_message(user_id: int, user_message: str, message: Message
         results = retrieve_answer(user_message, top_k=1)
         for i, result in enumerate(results, start=1):
             RAG_content = f"Here is additional context regarding user prompt. Try to prefer shorter responses. If relevant to the user query, take information from here. Question: {result['question']} + Answer: {result['answer']}"
+            print(result['question'])
             break
         responses = await generate_response(user_id, user_message, max_tokens=100, RAG_content=RAG_content)
     else:
