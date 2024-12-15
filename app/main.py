@@ -25,7 +25,6 @@ if os.name == "nt":  # Windows
 # Initialize the OpenAI client
 clientai = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-
 # Monkey patch for get_peer_type
 def get_peer_type(peer_id: int) -> str:
     print('get_peer_type call')
@@ -37,14 +36,13 @@ def get_peer_type(peer_id: int) -> str:
     else:
         return "chat"
 
-
 utils.get_peer_type = get_peer_type  # Apply the monkey patch
 
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
-# chat_id = int(os.getenv("CHAT_ID"))
-chat_id = int(-1002303184948)
-# chat_id = int(-1004622341003)
+chat_id = int(os.getenv("CHAT_ID"))
+# chat_id = int(-1002303184948)
+# chat_id = int(-1002240327148)
 
 # Initialize a dictionary to hold message histories for each user
 user_histories = defaultdict(lambda: deque(maxlen=40))
@@ -89,40 +87,43 @@ last_active_time = datetime.datetime.utcnow()
 # How much minutes to wait before sending engaging message
 INACTIVITY_TIME_RANGE = int(os.getenv("INACTIVITY_TIME_RANGE"))
 
-ignore_sender_id = [609517172, 696267355, 210944655, 788011089]
+ignore_sender_id = [609517172, 696267355, 210944655]
+
+moderators_sender_id = [7661664858, 7742996618, 7947768032, 8007969958]
 
 # Predefined phrases for initial message
 predefined_phrases = [
-    "yo, what's the vibe here?",
-    "morning, legends 🌞",
-    "sup everyone, feeling lucky today?",
-    "just checking in, what's poppin'?",
-    "heyy, how’s everyone doing?",
-    "guess who’s back 🫡",
-    "lol, is it just me or does time fly in here?",
-    "any cool quests today? asking for a friend 🤔",
-    "hey gang, let’s make some magic 🪄",
-    "ok but who’s ready for free tokens? 🤑",
-    "i'm here! let the fun begin 🎉",
-    "not me joining just to see the drama 👀",
-    "what’s cooking, good looking? (jk, what's new?)",
-    "good evening, or whatever time it is wherever y’all are 🕒",
-    "hey hey, anything exciting going on?",
-    "alright, who’s claiming what today?",
-    "lol, anyone else just chilling here like it’s a lounge?",
-    "random thought: this wallet is kinda cool, no?",
-    "what a day! hope you all smashed your quests 🎯",
-    "here to spread good vibes and maybe claim some tokens ✨",
-    "wassup fam, let's talk airdrops 🚀",
-    "soooo, how’s it going in here?",
-    "lol, why is this place so quiet? let’s chat!",
-    "yo, who's already airdrop-rich today? 🤩",
-    "hey everyone, what’s your favorite crypto meme?",
-    "what’s good? let’s make this a positive day 🌟",
-    "lol, am I the only one excited for quests?",
-    "hey folks, any tips for newbies? asking for… me 😅",
-    "heyy, let’s keep it light and fun today 😎",
-    "good vibes only, who’s with me? 🙌"
+    # "yo, what's the vibe here?",
+    # "morning, legends 🌞",
+    # "sup everyone, feeling lucky today?",
+    # "just checking in, what's poppin'?",
+    # "heyy, how’s everyone doing?",
+    # "guess who’s back 🫡",
+    # "lol, is it just me or does time fly in here?",
+    # "any cool quests today? asking for a friend 🤔",
+    # "hey gang, let’s make some magic 🪄",
+    # "ok but who’s ready for free tokens? 🤑",
+    # "i'm here! let the fun begin 🎉",
+    # "not me joining just to see the drama 👀",
+    # "what’s cooking, good looking? (jk, what's new?)",
+    # "good evening, or whatever time it is wherever y’all are 🕒",
+    # "hey hey, anything exciting going on?",
+    # "alright, who’s claiming what today?",
+    # "lol, anyone else just chilling here like it’s a lounge?",
+    # "random thought: this wallet is kinda cool, no?",
+    # "what a day! hope you all smashed your quests 🎯",
+    # "here to spread good vibes and maybe claim some tokens ✨",
+    # "wassup fam, let's talk airdrops 🚀",
+    # "soooo, how’s it going in here?",
+    # "lol, why is this place so quiet? let’s chat!",
+    # "yo, who's already airdrop-rich today? 🤩",
+    # "hey everyone, what’s your favorite crypto meme?",
+    # "what’s good? let’s make this a positive day 🌟",
+    # "lol, am I the only one excited for quests?",
+    # "hey folks, any tips for newbies? asking for… me 😅",
+    # "heyy, let’s keep it light and fun today 😎",
+    # "good vibes only, who’s with me? 🙌",
+    "sup everyone"
 ]
 
 keywords = [
@@ -273,7 +274,6 @@ single_line_instructions = (
     "Respond with a single, concise message."
 )
 
-
 def is_latin(word: str) -> bool:
     """
     Checks if the word consists only of Latin alphabet characters and numbers.
@@ -309,7 +309,94 @@ def is_english(message: str) -> bool:
     return all(is_latin(word) for word in words)
 
 
-async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_content='') -> list:
+# Initialize the message queue
+message_queue = asyncio.Queue()
+
+# Define sentiment emojis
+positive_sentiment = ["🔥", "😎"]
+neutral_sentiment = ["🤔", "👀"]
+negative_sentiment = ["💔", "🫡"]
+
+async def send_message_with_delay():
+    """
+    Background task that sends messages from the queue with a 30-second delay between sends.
+    Differentiates between user-specific replies and general chat messages.
+    """
+    while True:
+        message, text, kwargs = await message_queue.get()
+        try:
+            if message:
+                # User-specific reply
+                user_id = message.from_user.id
+
+                mean_delay = 30
+                std_dev = 7
+                typing_delay = random.gauss(mean_delay, std_dev)
+
+                # Ensure the delay stays within reasonable bounds (5 to 15 seconds)
+                delay = min(60, max(7, int(typing_delay)))
+
+                print(f"Waiting {delay} seconds before sending message to user {user_id}")
+                await asyncio.sleep(delay)  # Wait for 30 seconds before sending
+                await message.reply_text(text, **kwargs)
+                print(f"Sent message to user {user_id}: {text}")
+            else:
+                # General chat message
+                chat_id = kwargs.get('chat_id')
+                if not chat_id:
+                    print("Error: 'chat_id' not provided for general chat message.")
+                else:
+                    print(f"Waiting 30 seconds before sending chat message to {chat_id}")
+                    await asyncio.sleep(30)  # Wait for 30 seconds before sending
+                    # Remove 'chat_id' from kwargs to avoid duplication
+                    send_kwargs = kwargs.copy()
+                    send_kwargs.pop('chat_id', None)
+                    await app.send_message(chat_id=chat_id, text=text, **send_kwargs)
+                    print(f"Sent chat message to {chat_id}: {text}")
+        except FloodWait as e:
+            print(f"FloodWait encountered. Waiting for {e.value} seconds.")
+            await asyncio.sleep(e.value)
+            try:
+                if message:
+                    # Retry sending user-specific reply after FloodWait
+                    user_id = message.from_user.id
+                    await message.reply_text(text, **kwargs)
+                    print(f"Sent message after FloodWait to user {user_id}: {text}")
+                else:
+                    # Retry sending general chat message after FloodWait
+                    if chat_id:
+                        send_kwargs = kwargs.copy()
+                        send_kwargs.pop('chat_id', None)
+                        await app.send_message(chat_id=chat_id, text=text, **send_kwargs)
+                        print(f"Sent chat message after FloodWait to chat {chat_id}: {text}")
+            except Exception as e:
+                print(f"Failed to send message after FloodWait: {e}")
+        except Exception as e:
+            print(f"Failed to send message: {e}")
+        finally:
+            message_queue.task_done()
+
+async def enqueue_message(message: Message, text: str, **kwargs):
+    """
+    Enqueues a user-specific message to be sent after a delay.
+    """
+    await message_queue.put((message, text, kwargs))
+    print(f"Enqueued message to user {message.from_user.id}: {text}")
+
+async def enqueue_chat_message(text: str, chat_id: int, **kwargs):
+    """
+    Enqueues a general chat message to be sent after a delay.
+    """
+    await message_queue.put((None, text, {'chat_id': chat_id, **kwargs}))
+    print(f"Enqueued chat message to {chat_id}: {text}")
+
+async def process_chat_message(text: str, chat_id: int, **kwargs):
+    """
+    Processes a chat message by enqueuing it for sending.
+    """
+    await enqueue_chat_message(text, chat_id, **kwargs)
+
+async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_content='', isModer = False) -> list:
     global last_active_time
     try:
         # Retrieve the user's message history
@@ -322,6 +409,10 @@ async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_
         # )[0]
         extra_instructions = single_line_instructions
 
+        if isModer:
+            extra_instructions = extra_instructions + " Consider that the user you are replying to is moderator of this chat ."
+            print(extra_instructions)
+
         fetched_context = "\n".join(fetched_posts[CHANNEL_USERNAME])
         # print(fetched_context)
 
@@ -329,11 +420,11 @@ async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_
 
         # Prepare the messages for OpenAI, including the system prompt
         messages = [
-                       {"role": "system", "content": system_prompt},
-                       {"role": "system", "content": f"{RAG_content}"},
-                       {"role": "system",
-                        "content": f"Here are the latest posts from the official Spell channel - refer to that as official ground-truth information about the project: \"{fetched_context}\""},
-                   ] + history
+            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": f"{RAG_content}"},
+            {"role": "system",
+             "content": f"Here are the latest posts from the official Spell channel - refer to that as official ground-truth information about the project: \"{fetched_context}\""},
+        ] + history
 
         # Create the completion
         completion = clientai.chat.completions.create(
@@ -365,7 +456,6 @@ async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_
         print(f"OpenAI API error: {e}")
         return ["Oops, something went wrong!"]
 
-
 def sanitize_user_input(user_message: str) -> str:
     # List of restricted phrases
     restricted_phrases = [
@@ -379,7 +469,6 @@ def sanitize_user_input(user_message: str) -> str:
             return "wdym,  bro? chill"
 
     return user_message
-
 
 async def is_relevant_message(message_text: str) -> bool:
     function_schema = {
@@ -404,7 +493,7 @@ async def is_relevant_message(message_text: str) -> bool:
         # Prepare the messages
         messages = [
             {"role": "system",
-             "content": "You are the system that decides whether to respond to messages based on their relevance in the chat of Spell Crypto Airdrop Wallet - making airdrop claim easy and accessible for everyone. We define message relevance for responding as such that an ordinary user might want to answer or just add something, making good and positive narrative promotion, and provide encouragement. Be open to casual and informal exchanges that promote positive narratives and user participation.Decide if the message is worth responding to and has potential for communication. @ByteeMagee is tag of our bot."},
+             "content": "You are the system that decides whether to respond to messages based on their relevance in the chat of Spell Crypto Airdrop Wallet - making airdrop claim easy and accessible for everyone. We define message relevance for responding as such that an ordinary user might want to answer, making good and positive narrative promotion, and provide encouragement. Be open to casual and informal exchanges that promote positive narratives and user participation. Decide if the message is worth responding to and has potential for communication. @ByteeMagee is tag of our bot."},
             {"role": "system", "content": "You decided relevance of messages to the user named Noah, student from Ireland, 22yo."},
             {"role": "user", "content": message_text}
         ]
@@ -415,24 +504,24 @@ async def is_relevant_message(message_text: str) -> bool:
             messages=messages,
             functions=functions,
             function_call={"name": "assess_relevance"},
-            temperature=0.3
+            temperature=0
         )
 
         # print("OpenAI API Response:", response)
 
         function_call = response.choices[0].message.function_call
         arguments = json.loads(function_call.arguments)
-        print(f"GPT-4o-mini think that message '{message_text}' is: {arguments['response']}")
+        print(f"GPT-4o-mini thinks that message '{message_text}' is: {arguments['response']}")
         return arguments.get("response", False)
 
     except Exception as e:
         print(f"Error in OpenAI API call: {e}")
         return False
 
-
 @app.on_message(filters.chat(chat_id) & filters.text)
 async def handle_message(client: Client, message: Message):
     user_message = sanitize_user_input(message.text)
+    print(f"USER MESSAGE: {user_message}")
     user_id = message.from_user.id
 
     # Detect if the message is in English
@@ -441,9 +530,8 @@ async def handle_message(client: Client, message: Message):
         if message.reply_to_message and message.reply_to_message.from_user and message.reply_to_message.from_user.is_self:
             # If the non-English message is a direct reply to the bot, respond with a predefined phrase
             non_english_reply_phrase = random.choice(non_english_reply_phrases)
-            await asyncio.sleep(6)
-            await message.reply_text(non_english_reply_phrase)
-            print(f"Replied to non-English message from user {user_id}")
+            await enqueue_message(message, non_english_reply_phrase)
+            print(f"Enqueued non-English reply to user {user_id}")
         # For non-reply non-English messages, do not respond
         return  # Exit early
 
@@ -487,7 +575,8 @@ async def handle_message(client: Client, message: Message):
                         pending_users.append(user_id)
                         print(f"Enqueued user {user_id} to pending users")
                         # Notify the user they're in the queue
-                        # await message.reply_text("You're in the queue! I'll get back to you shortly. 😊")
+                        # Uncomment the line below if you want to notify users in the queue
+                        # await enqueue_chat_message("You're in the queue! I'll get back to you shortly. 😊", chat_id)
     # Proceed to handle the message
     elif message.reply_to_message:
         # Check if the reply is to the bot's message
@@ -506,11 +595,11 @@ async def handle_message(client: Client, message: Message):
         if await is_relevant_message(user_message):
             async with user_lock:
                 if user_id in active_users:
-                    should_respond = random.random() > 0.65
+                    should_respond = random.random() > 0.80
                     if should_respond:
                         await process_user_message(user_id, user_message, message)
                     else:
-                        print(f"Decided to ignore message from user {user_id} based on 60% chance.")
+                        print(f"Decided to ignore message from user {user_id} based on 80% chance.")
                 elif user_id not in active_users and user_id not in pending_users:
                     should_respond = random.random() > 0.8
                     if should_respond:
@@ -524,15 +613,15 @@ async def handle_message(client: Client, message: Message):
                                 pending_users.append(user_id)
                                 print(f"Enqueued user {user_id} to pending users")
                             # Notify the user they're in the queue
-                            await message.reply_text("You're in the queue! I'll get back to you shortly. 😊")
+                            await enqueue_message(message, "You're in the queue! I'll get back to you shortly. 😊")
+                else:
+                    print("Decided not to reply to this message.")
         else:
-            print("Decided not to reply to this message.")
-
+            print("Decided not to reply to this message as it's not relevant.")
 
 def get_embedding(text, model="text-embedding-3-small"):
     text = text.replace("\n", " ")
     return clientai.embeddings.create(input=[text], model=model).data[0].embedding
-
 
 def retrieve_answer(query, top_k=1, HDF5_PATH=os.getenv("HDF5_PATH")):
     # Load data
@@ -555,14 +644,9 @@ def retrieve_answer(query, top_k=1, HDF5_PATH=os.getenv("HDF5_PATH")):
     ]
     return results
 
-
-positive_sentiment = ["🔥", "😎"]
-neutral_sentiment = ["🤔", "👀", "🥸"]
-negative_sentiment = ["😢", "😒", "☹️"]
-
-
 async def process_user_message(user_id: int, user_message: str, message: Message):
     global last_active_time
+    isModer = False
 
     # Append the user's message to their history
     user_histories[user_id].append({"role": "user", "content": user_message})
@@ -570,6 +654,9 @@ async def process_user_message(user_id: int, user_message: str, message: Message
     sentiment = TextBlob(user_message).sentiment.polarity
     print(f"Sentiment: {sentiment}")
     reaction = None
+
+    if user_id in moderators_sender_id:
+        isModer = True
 
     if random.random() < 0.3:  # 30% chance to react
         if sentiment > 0.3:
@@ -583,8 +670,9 @@ async def process_user_message(user_id: int, user_message: str, message: Message
         if reaction:
             await asyncio.sleep(3)
             await app.send_reaction(chat_id=message.chat.id, message_id=message.id, emoji=reaction)
-    except:
-        print("Reaction failed")
+            print(f"Sent reaction {reaction} to message {message.id}")
+    except Exception as e:
+        print(f"Reaction failed: {e}")
 
     user_message_lower = user_message.lower()
 
@@ -597,47 +685,17 @@ async def process_user_message(user_id: int, user_message: str, message: Message
             RAG_content = f"Here is additional context regarding user prompt. Try to prefer shorter responses. If relevant to the user query, take information from here. Question: {result['question']} + Answer: {result['answer']}"
             print(result['question'])
             break
-        responses = await generate_response(user_id, user_message, max_tokens=100, RAG_content=RAG_content)
+        responses = await generate_response(user_id, user_message, max_tokens=100, RAG_content=RAG_content, isModer=isModer)
     else:
-        responses = await generate_response(user_id, user_message)
+        responses = await generate_response(user_id, user_message, isModer=isModer)
 
-    if random.random() >= 0.05:  # 90% chance to send responses
-        for i, response in enumerate(responses):
-            # Typing delay
-            mean_delay = 30
-            std_dev = 7
-            typing_delay = random.gauss(mean_delay, std_dev)
-
-            # Ensure the delay stays within reasonable bounds (5 to 15 seconds)
-            delay = min(60, max(7, int(typing_delay)))
-            print(f"Delay is {delay}")
-
-            # Inter-message pause, also using a normal distribution
-            if i > 0:
-                mean_pause = 6
-                std_dev_pause = 1.5
-                inter_message_pause = random.gauss(mean_pause, std_dev_pause)
-                inter_message_pause = min(15, max(5, int(inter_message_pause)))  # Clamp to range 3-5
-                delay = inter_message_pause
-
-            # Simulate delay and send message
-            await asyncio.sleep(31)
-            await message.reply_text(response)
-
-            # try:
-            #     await message.reply_text(response)
-            # except FloodWait as e:
-            #     print(f"FloodWait: Waiting for {e.value} seconds.")
-            #     await asyncio.sleep(e.value)
-            #     await message.reply_text(response)
-            # except Exception as e:
-            #     print(f"Failed to send message: {e}")
-
+    if random.random() >= 0.05:  # 95% chance to send responses
+        for response in responses:
+            await enqueue_message(message, response)
             # Update the last active time
             last_active_time = datetime.datetime.utcnow()
     else:
         print("Random decided to ignore such message.")
-
 
 async def user_timeout(user_id: int):
     try:
@@ -655,13 +713,13 @@ async def user_timeout(user_id: int):
                     user_timeouts[next_user] = asyncio.create_task(user_timeout(next_user))
                     print(f"Promoted user {next_user} from pending to active users")
                     # Notify the user they've been promoted
-                    # await app.send_message(chat_id, f"@{next_user} You're now up! Let's chat! 😊")
+                    # Uncomment the line below if you want to notify users when they are promoted
+                    # await enqueue_message(next_user_message, "You're now active! Let's chat! 😊")
     except asyncio.CancelledError:
         print(f"Timeout task for user {user_id} was cancelled (user replied).")
 
-
 async def fetch_initial_posts(client, channel_name: str, limit: int = 10):
-    print("we are in the function fetch_initial_posts")
+    print("Fetching initial posts from the channel.")
     try:
         async for message in client.get_chat_history(channel_name, limit=limit):
             content = None
@@ -682,7 +740,6 @@ async def fetch_initial_posts(client, channel_name: str, limit: int = 10):
                 print("Fetched a message with no recognizable content.")
     except Exception as e:
         print(f"Error fetching initial posts: {e}")
-
 
 async def generate_contextual_message():
     try:
@@ -733,7 +790,6 @@ async def generate_contextual_message():
         print(f"Error generating contextual message: {e}")
         return None
 
-
 async def background_activity_monitor():
     global last_active_time
     while True:
@@ -741,20 +797,10 @@ async def background_activity_monitor():
         time_since_last_active = datetime.datetime.utcnow() - last_active_time
         time_range = INACTIVITY_TIME_RANGE
         if time_since_last_active > datetime.timedelta(minutes=time_range):
-            # print(f"No active conversations in the last {time_range} minutes. Generating contextual message.")
-            # contextual_message = await generate_contextual_message()
-            contextual_message = None
+            contextual_message = await generate_contextual_message()
             if contextual_message:
-                # Simulate typing delay
-                typing_speed = random.uniform(4, 6)
-                base_delay = len(contextual_message) / typing_speed
-                random_variation = random.uniform(-1, 2)
-                delay = min(10, max(2, int(base_delay + random_variation)))
-                await asyncio.sleep(delay)
-
-                await app.send_message(chat_id, contextual_message)
-                print("Contextual message sent successfully.")
-
+                await enqueue_chat_message(contextual_message, chat_id=chat_id)
+                print("Enqueued contextual message successfully.")
                 # Update the last active time
                 last_active_time = datetime.datetime.utcnow()
             else:
@@ -762,11 +808,16 @@ async def background_activity_monitor():
         else:
             print(f"Last active {time_since_last_active.seconds} seconds ago. No need to send a message.")
 
-
 async def main():
     await app.start()
 
     try:
+        # Start the message sender background task
+        asyncio.create_task(send_message_with_delay())
+
+        # Start the background activity monitor
+        # asyncio.create_task(background_activity_monitor())
+
         # Fetch and store initial posts
         await fetch_initial_posts(app, CHANNEL_USERNAME)
 
@@ -776,18 +827,14 @@ async def main():
 
         # Send an initial message
         initial_message = random.choice(predefined_phrases)
-        await app.send_message(chat_id, initial_message)
-        print("Initial message sent successfully.")
-
-        # Start the background activity monitor
-        # asyncio.create_task(background_activity_monitor())
+        await enqueue_chat_message(initial_message, chat_id=chat_id)
+        print("Enqueued initial message successfully.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
         # Keep the client running to listen for incoming messages
         await idle()
-
 
 if __name__ == "__main__":
     app.run(main())
