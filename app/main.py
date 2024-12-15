@@ -40,9 +40,9 @@ utils.get_peer_type = get_peer_type  # Apply the monkey patch
 
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
-chat_id = int(os.getenv("CHAT_ID"))
+# chat_id = int(os.getenv("CHAT_ID"))
 # chat_id = int(-1002303184948)
-# chat_id = int(-1002240327148)
+chat_id = int(-1002240327148)
 
 # Initialize a dictionary to hold message histories for each user
 user_histories = defaultdict(lambda: deque(maxlen=40))
@@ -83,6 +83,8 @@ user_lock = asyncio.Lock()
 
 # Initialize last active time
 last_active_time = datetime.datetime.utcnow()
+
+reply_to_other_conv = False
 
 # How much minutes to wait before sending engaging message
 INACTIVITY_TIME_RANGE = int(os.getenv("INACTIVITY_TIME_RANGE"))
@@ -398,6 +400,8 @@ async def process_chat_message(text: str, chat_id: int, **kwargs):
 
 async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_content='', isModer = False) -> list:
     global last_active_time
+    global reply_to_other_conv
+
     try:
         # Retrieve the user's message history
         history = list(user_histories[user_id])
@@ -412,6 +416,12 @@ async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_
         if isModer:
             extra_instructions = extra_instructions + " Consider that the user you are replying to is moderator of this chat ."
             print(extra_instructions)
+        if reply_to_other_conv:
+            extra_instructions = extra_instructions + " Also consider that you will reply to the message from other conversation. Originally it wasn't adressed to you, but to other person. So if you are answering, answer like you add something or ask from you side? Just like going in the middle of the conversation. Like if somebody asks 'How are you' - It was adressed to other person that was interested in how other person is doing, in such cases you can just add something or ask person as well. "
+            print(extra_instructions)
+            print(reply_to_other_conv)
+            reply_to_other_conv = False
+            print(reply_to_other_conv)
 
         fetched_context = "\n".join(fetched_posts[CHANNEL_USERNAME])
         # print(fetched_context)
@@ -517,9 +527,11 @@ async def is_relevant_message(message_text: str) -> bool:
     except Exception as e:
         print(f"Error in OpenAI API call: {e}")
         return False
-
+# TODO: add users to active users ONLY after we've decided to answer them
 @app.on_message(filters.chat(chat_id) & filters.text)
 async def handle_message(client: Client, message: Message):
+    global reply_to_other_conv
+
     user_message = sanitize_user_input(message.text)
     print(f"USER MESSAGE: {user_message}")
     user_id = message.from_user.id
@@ -581,6 +593,7 @@ async def handle_message(client: Client, message: Message):
     elif message.reply_to_message:
         # Check if the reply is to the bot's message
         if message.reply_to_message.from_user and message.reply_to_message.from_user.is_self:
+        # if message.reply_to_message.from_user:
             # Only respond if user is active
             async with user_lock:
                 if user_id in active_users:
@@ -589,13 +602,24 @@ async def handle_message(client: Client, message: Message):
                 else:
                     print(f"User {user_id} is not active. Ignoring the reply.")
         else:
-            print("Message is a reply, but not to the bot's message. Ignoring.")
+            should_respond = random.random() > 0.65
+            if should_respond:
+                async with user_lock:
+                    if user_id in active_users:
+                        if await is_relevant_message(user_message):
+                            reply_to_other_conv = True
+                            await process_user_message(user_id, user_message, message)
+                    else:
+                        print(f"User {user_id} is not active. Ignoring the reply.")
+            else:
+                print("Decided to ignore other reply on 65% chance.")
+            # print("Message is a reply, but not to the bot's message. Ignoring.")
     else:
         # Handle ordinary (non-reply) messages
         if await is_relevant_message(user_message):
             async with user_lock:
                 if user_id in active_users:
-                    should_respond = random.random() > 0.80
+                    should_respond = random.random() > 0.65
                     if should_respond:
                         await process_user_message(user_id, user_message, message)
                     else:
@@ -827,7 +851,7 @@ async def main():
 
         # Send an initial message
         initial_message = random.choice(predefined_phrases)
-        await enqueue_chat_message(initial_message, chat_id=chat_id)
+        # await enqueue_chat_message(initial_message, chat_id=chat_id)
         print("Enqueued initial message successfully.")
 
     except Exception as e:
