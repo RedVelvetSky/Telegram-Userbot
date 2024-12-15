@@ -1,4 +1,4 @@
-pyrogram~=2.0.106
+pyrogram
 openai~=1.55.1
 TgCrypto
 h5py~=3.11.0
