@@ -737,7 +737,7 @@ async def process_user_message(user_id: int, user_message: str, message: Message
     else:
         responses = await generate_response(user_id, user_message, isModer=isModer)
 
-    if random.random() >= 0.05:  # 95% chance to send responses
+    if random.random() >= 0.15:  # 85% chance to send responses
         for response in responses:
             await enqueue_message(message, response)
             # Update the last active time
