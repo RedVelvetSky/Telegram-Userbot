@@ -93,6 +93,9 @@ ignore_sender_id = [609517172, 696267355, 210944655]
 
 moderators_sender_id = [7661664858, 7742996618, 7947768032, 8007969958]
 
+# set to keep track of replied message IDs
+replied_message_ids = deque(maxlen=100)
+
 # Predefined phrases for initial message
 predefined_phrases = [
     # "yo, what's the vibe here?",
@@ -532,6 +535,19 @@ async def is_relevant_message(message_text: str) -> bool:
 async def handle_message(client: Client, message: Message):
     global reply_to_other_conv
 
+    # **Ignore messages sent by the bot itself**
+    if message.from_user and message.from_user.is_self:
+        print("Message from the bot itself. Ignoring.")
+        return
+
+    # **Ignore messages that have already been replied to**
+    if message.id in replied_message_ids:
+        print(f"Already replied to message {message.id}. Ignoring.")
+        return
+
+    # **Mark the message as replied to**
+    replied_message_ids.append(message.id)
+
     user_message = sanitize_user_input(message.text)
     print(f"USER MESSAGE: {user_message}")
     user_id = message.from_user.id
@@ -541,9 +557,9 @@ async def handle_message(client: Client, message: Message):
         print(f"Non-English message from user {user_id} ignored.")
         if message.reply_to_message and message.reply_to_message.from_user and message.reply_to_message.from_user.is_self:
             # If the non-English message is a direct reply to the bot, respond with a predefined phrase
-            non_english_reply_phrase = random.choice(non_english_reply_phrases)
-            await enqueue_message(message, non_english_reply_phrase)
-            print(f"Enqueued non-English reply to user {user_id}")
+            # non_english_reply_phrase = random.choice(non_english_reply_phrases)
+            # await enqueue_message(message, non_english_reply_phrase)
+            print(f"Non-English reply to user {user_id}")
         # For non-reply non-English messages, do not respond
         return  # Exit early
 
@@ -593,7 +609,6 @@ async def handle_message(client: Client, message: Message):
     elif message.reply_to_message:
         # Check if the reply is to the bot's message
         if message.reply_to_message.from_user and message.reply_to_message.from_user.is_self:
-        # if message.reply_to_message.from_user:
             # Only respond if user is active
             async with user_lock:
                 if user_id in active_users:
