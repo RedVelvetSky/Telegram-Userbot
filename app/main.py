@@ -40,8 +40,8 @@ utils.get_peer_type = get_peer_type  # Apply the monkey patch
 
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
-chat_id = int(os.getenv("CHAT_ID"))
-# chat_id = int(-1002303184948)
+# chat_id = int(os.getenv("CHAT_ID"))
+chat_id = int(-1002303184948)
 # chat_id = int(-1002240327148)
 
 # Initialize a dictionary to hold message histories for each user
@@ -503,7 +503,7 @@ async def is_relevant_message(message_text: str) -> bool:
         # Prepare the messages
         messages = [
             {"role": "system",
-             "content": "You are the system that decides whether to respond to messages based on their relevance in the chat of Spell Crypto Airdrop Wallet - making airdrop claim easy and accessible for everyone. We define message relevance for responding as such that an ordinary user might want to answer, making good and positive narrative promotion, and provide encouragement. Be open to casual and informal exchanges that promote positive narratives and user participation. Decide if the message is worth responding to and has potential for communication. @ByteeMagee is tag of our bot."},
+             "content": "You are the system that decides whether to respond to messages based on their relevance in the chat of Spell Crypto Airdrop Wallet - making airdrop claim easy and accessible for everyone. We define message relevance for responding as such that an ordinary user might want to answer. Be open to casual and informal exchanges that promote positive narratives and user participation. Prefer allow answer rather on more interesting messages, rather on simple 'Hello' - decide to answer to 'Hi', 'Hello' only sometimes. Decide if the message is worth responding to and has potential for communication. @ByteeMagee is tag of our bot."},
             {"role": "system", "content": "You decided relevance of messages to the user named Noah, student from Ireland, 22yo."},
             {"role": "user", "content": message_text}
         ]
@@ -547,8 +547,8 @@ async def handle_message(client: Client, message: Message):
         # For non-reply non-English messages, do not respond
         return  # Exit early
 
-    if user_id in ignore_sender_id:
-        print(f"Ignoring message from user {user_id} based on ban list.")
+    if (user_id in ignore_sender_id) or user_message.startswith(("/", "!")):
+        print(f"Ignoring message from user {user_id} based on ban list and other rules.")
         return
 
     async with user_lock:
