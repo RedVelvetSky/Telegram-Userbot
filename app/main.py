@@ -40,8 +40,8 @@ utils.get_peer_type = get_peer_type  # Apply the monkey patch
 
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
-chat_id = int(os.getenv("CHAT_ID"))
-# chat_id = int(-1002303184948)
+# chat_id = int(os.getenv("CHAT_ID"))
+chat_id = int(-1002303184948)
 # chat_id = int(-1002240327148)
 
 # Initialize a dictionary to hold message histories for each user
@@ -89,7 +89,7 @@ reply_to_other_conv = False
 # How much minutes to wait before sending engaging message
 INACTIVITY_TIME_RANGE = int(os.getenv("INACTIVITY_TIME_RANGE"))
 
-ignore_sender_id = [609517172, 696267355, 210944655]
+ignore_sender_id = [609517172, 696267355, 210944655, 7369837197]
 
 moderators_sender_id = [7661664858, 7742996618, 7947768032, 8007969958]
 
@@ -531,6 +531,15 @@ async def is_relevant_message(message_text: str) -> bool:
         print(f"Error in OpenAI API call: {e}")
         return False
 # TODO: add users to active users ONLY after we've decided to answer them
+def contains_url(user_message):
+    url_pattern = re.compile(
+        r'(https?:\/\/(?:www\.)?|www\.)'  # http://, https://, or www.
+        r'[\w\-]+(\.[\w\-]+)+'  # domain name and extension
+        r'([\/\w\-._~:?#@!$&\'()*+,;=%]*)?'  # optional path, query, and fragment
+    )
+    return bool(url_pattern.search(user_message))
+
+
 @app.on_message(filters.chat(chat_id) & filters.text)
 async def handle_message(client: Client, message: Message):
     global reply_to_other_conv
@@ -563,7 +572,7 @@ async def handle_message(client: Client, message: Message):
         # For non-reply non-English messages, do not respond
         return  # Exit early
 
-    if (user_id in ignore_sender_id) or user_message.startswith(("/", "!")):
+    if (user_id in ignore_sender_id) or (user_message.startswith(("/", "!")) or (contains_url(user_message))):
         print(f"Ignoring message from user {user_id} based on ban list and other rules.")
         return
 
