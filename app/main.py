@@ -602,7 +602,7 @@ async def handle_message(client: Client, message: Message):
                 else:
                     print(f"User {user_id} is not active. Ignoring the reply.")
         else:
-            should_respond = random.random() > 0.65
+            should_respond = random.random() > 0.60
             if should_respond:
                 async with user_lock:
                     if user_id in active_users:
@@ -619,13 +619,13 @@ async def handle_message(client: Client, message: Message):
         if await is_relevant_message(user_message):
             async with user_lock:
                 if user_id in active_users:
-                    should_respond = random.random() > 0.65
+                    should_respond = random.random() > 0.60
                     if should_respond:
                         await process_user_message(user_id, user_message, message)
                     else:
                         print(f"Decided to ignore message from user {user_id} based on 80% chance.")
                 elif user_id not in active_users and user_id not in pending_users:
-                    should_respond = random.random() > 0.8
+                    should_respond = random.random() > 0.60
                     if should_respond:
                         if len(active_users) < MAX_ACTIVE_USERS:
                             active_users.add(user_id)
