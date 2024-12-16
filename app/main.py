@@ -40,9 +40,9 @@ utils.get_peer_type = get_peer_type  # Apply the monkey patch
 
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
-# chat_id = int(os.getenv("CHAT_ID"))
+chat_id = int(os.getenv("CHAT_ID"))
 # chat_id = int(-1002303184948)
-chat_id = int(-1002240327148)
+# chat_id = int(-1002240327148)
 
 # Initialize a dictionary to hold message histories for each user
 user_histories = defaultdict(lambda: deque(maxlen=40))
