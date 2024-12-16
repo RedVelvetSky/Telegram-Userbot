@@ -91,6 +91,8 @@ Stop the Docker container using:
 docker-compose down
 ```
 
+---
+
 ## **Key Workflows**
 
 ### Main Workflow
@@ -104,6 +106,8 @@ docker-compose down
 
 ### Inactivity Monitoring
 - If the chat is inactive for a configured period, the bot generates a contextual message to re-engage users.
+
+---
 
 ## **Notes**
 - Ensure all environmental variables are configured correctly before running the bot.
