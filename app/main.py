@@ -539,6 +539,21 @@ def contains_url(user_message):
     )
     return bool(url_pattern.search(user_message))
 
+# Define drop probabilities for each reply count
+drop_probabilities = [0.05, 0.07, 0.15, 0.20, 0.25]
+
+def get_drop_probability(reply_count):
+    """
+    Returns the drop probability based on the number of replies sent to the user.
+    After the predefined list, cap the probability at the last value.
+    """
+    if reply_count <= len(drop_probabilities):
+        return drop_probabilities[reply_count - 1]
+    else:
+        return drop_probabilities[-1]  # Capping at 20%
+        # Alternatively, to increase further:
+        # return min(0.20 + 0.03 * (reply_count - len(drop_probabilities)), 0.50)
+
 
 @app.on_message(filters.chat(chat_id) & filters.text)
 async def handle_message(client: Client, message: Message):
@@ -737,7 +752,11 @@ async def process_user_message(user_id: int, user_message: str, message: Message
     else:
         responses = await generate_response(user_id, user_message, isModer=isModer)
 
-    if random.random() >= 0.15:  # 85% chance to send responses
+    reply_count = sum(1 for msg in user_histories[user_id] if msg['role'] == 'assistant')
+    drop_prob = get_drop_probability(reply_count)
+    print(f"User {user_id} has {reply_count} bot replies. Drop probability: {drop_prob * 100}%")
+
+    if random.random() >= drop_prob:
         for response in responses:
             await enqueue_message(message, response)
             # Update the last active time
