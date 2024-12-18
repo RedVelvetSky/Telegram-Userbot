@@ -4,3 +4,4 @@ h5py~=3.11.0
 scikit-learn~=1.4.1.post1
 python-dotenv~=1.0.1
 textblob~=0.18.0.post0
+pytz
