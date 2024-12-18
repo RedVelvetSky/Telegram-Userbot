@@ -553,6 +553,7 @@ async def is_relevant_message(message_text: str) -> bool:
     except Exception as e:
         print(f"Error in OpenAI API call: {e}")
         return False
+
 # TODO: add users to active users ONLY after we've decided to answer them
 def contains_url(user_message):
     url_pattern = re.compile(
@@ -635,6 +636,7 @@ async def handle_message(client: Client, message: Message):
                     pending_users.append(user_id)
                     print(f"Enqueued user {user_id} to pending users")
 
+    # TODO: fetch bot username from .env
     # Proceed to handle the message
     if "@ByteeMagee" in user_message:
         # Always process messages containing the bot tag
@@ -909,7 +911,7 @@ async def main():
         # Start the message sender background task
         asyncio.create_task(send_message_with_delay())
 
-        # Start the background activity monitor
+        # Start the background activity monitor and send contextual message if nothing happens
         # asyncio.create_task(background_activity_monitor())
 
         # Fetch and store initial posts
@@ -919,7 +921,7 @@ async def main():
         await app.get_chat(chat_id)
         print(f"Successfully fetched chat with ID {chat_id}")
 
-        # Send an initial message
+        # Send an initial message randomly from list of predefined_phrases
         initial_message = random.choice(predefined_phrases)
         # await enqueue_chat_message(initial_message, chat_id=chat_id)
         print("Enqueued initial message successfully.")

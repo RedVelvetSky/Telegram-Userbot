@@ -11,6 +11,7 @@ Here you will find a step-by-step guidance to set up and use the Telegram userbo
 - Periodically monitors chat for inactivity to re-engage users, can be disabled.
 - Fetches initial posts from a specified Telegram channel for context about project.
 - Implements RAG based on predefined Question-Answer pairs stored in .h5 file and keyword filtering.
+- Has inactivity/activity built-in configuration
 
 ---
 
@@ -49,6 +50,8 @@ MAX_ACTIVE_USERS=<max_active_users>
 ACTIVITY_TIME_WINDOW=<activity_time_window_in_seconds>
 INACTIVITY_TIME_RANGE=<inactivity_time_range_in_minutes>
 HDF5_PATH=<path_to_hdf5_file>
+ACTIVE_TIME_RANGES=<activity_time_ranges_using_comma>
+TIMEZONE=<UTC_or_other>
 ```
 
 ### **3. Build and Run the Bot with Docker**
@@ -96,16 +99,21 @@ docker-compose down
 ## **Key Workflows**
 
 ### Main Workflow
-- The bot continuously listens to messages in the specified chat.
-- It processes messages based on relevance and activity.
-- Responds with predefined phrases, retrieved answers, or simply generated responses using OpenAI.
+- The bot continuously listens to messages in the specified chat, mainly via next function:
+    ```python
+    @app.on_message(filters.chat(chat_id) & filters.text)
+    async def handle_message(client: Client, message: Message)
+    ```
+- It processes messages based on their relevance defined by `is_relevant_message(message_text: str) -> bool:` function, RAG pipeline and probabilities.
+- Responds contextually and updates message history, retrieved answers, or just ignores.
 
 ### Message Queuing
 - Messages are queued and sent with a delay to mimic human behavior.
 - Supports personalized replies and general chat messages.
 
-### Inactivity Monitoring
-- If the chat is inactive for a configured period, the bot generates a contextual message to re-engage users.
+### Inactivity Monitoring and Time Zones
+- If the chat is inactive for a configured period, the bot generates a contextual message to re-engage users (disabled by default).
+- Bot is inactive for certain period of time (configured in `.env`).
 
 ---
 
@@ -113,3 +121,5 @@ docker-compose down
 - Ensure all environmental variables are configured correctly before running the bot.
 - Messages with links, non-English text, or commands (e.g., /, !) are ignored.
 - The bot is designed to maintain a conversational tone, avoid formalities, and stay casual. You can always tweak prompt in the code.
+- Bot runs only for certain time ranges (e.g. `04:00-05:00,08:00-09:00,17:00-21:00`)
+- Check `ignore_sender_id` and `moderators_sender_id` lists. Users from first one will be ignored fully. Users from second will be recognised by LLM as chat moderator.
