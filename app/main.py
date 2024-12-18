@@ -4,6 +4,7 @@ import os
 
 import h5py
 import pyrogram.utils as utils
+import pytz
 from pyrogram import Client, filters, idle
 from pyrogram.types import Message
 from pyrogram.errors import FloodWait
@@ -40,9 +41,31 @@ utils.get_peer_type = get_peer_type  # Apply the monkey patch
 
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
-chat_id = int(os.getenv("CHAT_ID"))
+# chat_id = int(os.getenv("CHAT_ID"))
 # chat_id = int(-1002303184948)
-# chat_id = int(-1002240327148)
+chat_id = int(-1002240327148)
+
+ACTIVE_TIME_RANGES_STR = os.getenv("ACTIVE_TIME_RANGES", "04:00-05:00,08:00-09:00,17:00-21:00")
+TIMEZONE = os.getenv("TIMEZONE", "UTC")
+
+def parse_time_ranges(time_ranges_str):
+    ranges = []
+    for range_str in time_ranges_str.split(","):
+        start_str, end_str = range_str.strip().split("-")
+        start_time = datetime.datetime.strptime(start_str, "%H:%M").time()
+        end_time = datetime.datetime.strptime(end_str, "%H:%M").time()
+        ranges.append((start_time, end_time))
+    return ranges
+
+ACTIVE_TIME_RANGES = parse_time_ranges(ACTIVE_TIME_RANGES_STR)
+
+def is_current_time_in_active_range():
+    tz = pytz.timezone(TIMEZONE)
+    now = datetime.datetime.now(tz).time()
+    for start, end in ACTIVE_TIME_RANGES:
+        if start <= now <= end:
+            return True
+    return False
 
 # Initialize a dictionary to hold message histories for each user
 user_histories = defaultdict(lambda: deque(maxlen=40))
@@ -558,6 +581,10 @@ def get_drop_probability(reply_count):
 @app.on_message(filters.chat(chat_id) & filters.text)
 async def handle_message(client: Client, message: Message):
     global reply_to_other_conv
+
+    if not is_current_time_in_active_range():
+        print("Bot is currently inactive. Ignoring message.")
+        return
 
     # **Ignore messages sent by the bot itself**
     if message.from_user and message.from_user.is_self:
