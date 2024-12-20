@@ -458,6 +458,7 @@ async def generate_response(user_id: int, user_message: str, max_tokens=50, RAG_
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "system", "content": f"{RAG_content}"},
+            {"role": "system", "content": "Daily puzzle is being send every day. Users usually solve it and share solution as 4 digit number representing the order of emojis you need to select to solve the puzzle. If user asks something like 'puzzle?' or 'daily puzzle' just say that you dont know it yet or ignore."},
             {"role": "system",
              "content": f"Here are the latest posts from the official Spell channel - refer to that as official ground-truth information about the project: \"{fetched_context}\""},
         ] + history
